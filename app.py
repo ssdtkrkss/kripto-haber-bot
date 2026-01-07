@@ -79,3 +79,18 @@ def bot_baslat():
 
 if __name__ == "__main__":
     bot_baslat()
+    import http.server
+import socketserver
+import threading
+
+# Render'ın beklediği sahte port (kapı)
+def run_dummy_server():
+    PORT = 10000
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", PORT), handler) as httpd:
+        httpd.serve_forever()
+
+# Sahte server'ı arka planda başlat
+threading.Thread(target=run_dummy_server, daemon=True).start()
+
+# ... (Senin mevcut bot kodların burada devam etsin)
