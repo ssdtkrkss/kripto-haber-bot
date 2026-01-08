@@ -5,12 +5,10 @@ import os
 from flask import Flask
 from binance.client import Client
 
-# --- 1. RENDER İÇİN WEB SUNUCUSU ---
+# --- 1. WEB SUNUCUSU ---
 app = Flask(__name__)
-
 @app.route('/')
-def health_check():
-    return "Bot Aktif!", 200
+def health_check(): return "Bot Aktif", 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -28,14 +26,14 @@ GÜVENLİ_COİNLER = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', '
 client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY, {"verify": False})
 
 def bot_baslat():
-    print(">>> Bot Taramaya Basliyor...", flush=True)
+    print(">>> SİSTEM BAŞLATILDI. HABER BEKLENİYOR...", flush=True)
     islenenler = []
     
     while True:
         try:
-            # En guvenli URL yapisi
-            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&kind=news&filter=bullish"
-            response = requests.get(url, timeout=10)
+            # API URL'sini en basit haline getirdik (404 hatasini cozmek icin)
+            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&filter=bullish"
+            response = requests.get(url, timeout=15)
             
             if response.status_code == 200:
                 res = response.json()
@@ -43,15 +41,18 @@ def bot_baslat():
                     if post['id'] not in islenenler and 'currencies' in post:
                         coin = post['currencies'][0]['code']
                         if coin in GÜVENLİ_COİNLER:
-                            print(f"Haber yakalandi: {coin}", flush=True)
-                            # Binance islemi burada devreye girer
+                            print(f"!!! KRİTİK HABER YAKALANDI: {coin} !!!", flush=True)
+                            # Burada Binance emir kodu calisir
                             islenenler.append(post['id'])
+            elif response.status_code == 429:
+                print("Hiz sinirina takildi, 2 dakika bekleniyor...", flush=True)
+                time.sleep(120)
             else:
-                print(f"Site Baglanti Hatasi: {response.status_code}", flush=True)
+                print(f"Baglanti hatasi: {response.status_code}. Tekrar deneniyor...", flush=True)
         except Exception as e:
-            print(f"Hata: {e}", flush=True)
+            print(f"Sistemsel hata: {e}", flush=True)
         
-        time.sleep(60) # Engel yememek icin 60 saniye bekliyoruz
+        time.sleep(45) # Siteyi yormamak ve banlanmamak icin 45 saniye bekleme
 
 if __name__ == "__main__":
     bot_baslat()
