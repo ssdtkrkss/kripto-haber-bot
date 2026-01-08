@@ -8,7 +8,7 @@ from binance.client import Client
 # --- 1. RENDER WEB SUNUCUSU ---
 app = Flask(__name__)
 @app.route('/')
-def health_check(): return "HABER BOTU AKTIF", 200
+def health_check(): return "HABER BOTU CALISIYOR", 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -17,56 +17,57 @@ def run_web_server():
 threading.Thread(target=run_web_server, daemon=True).start()
 
 # --- 2. AYARLAR ---
+# Binance anahtarların (image_1425 referanslı)
 BINANCE_API_KEY = 'a5duZhCrP6nBJduimWprHwWgqV2Gv7LsiR9tzTTGAp7EBy0FMlcNpANeNrgarH8I'
-BINANCE_SECRET_KEY = '2hYYevQtdctBD1PxQaFNlKeDg4kcW7wU0aPA2n51ziEaoF6J9iPK1Tx3Ec92Vm4a'
+BINANCE_SECRET_KEY = 'BURAYA_SECRET_KEYINI_YAZ' # Secret key sadece ilk olusturmada gorunur
+# CryptoPanic anahtarın (image_1419 referanslı)
 PANIC_API_KEY = '2ae878976ba826131c7eb75e81803fbd42dab6da'
 
-GÜVENLİ_COİNLER = [
-    'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', 'DOGE', 'TRX', 'LINK', 'MATIC', 'LTC', 'NEAR', 'UNI', 'ICP', 'BCH', 'FIL', 'APT', 'ARB', 'OP', 'STX', 'RNDR', 'INJ', 'SUI', 'TIA', 'SEI', 'ORDI', 'BEAM', 'AAVE', 'IMX', 'KAS', 'LDO', 'FET', 'RUNE', 'ATOM', 'MKR', 'PEPE', 'GRT', 'ALGO', 'EGLD', 'QNT', 'FLOW', 'GALA', 'SNX', 'SAND', 'MANA', 'CHZ', 'AXS', 'MINA', 'DYDX', 'CRV', 'WLD', 'PYTH', 'BONK', 'JUP', 'STRK', 'LUNC', 'FLOKI', 'XMR', 'ETC', 'VET', 'THETA', 'FTM', 'HBAR', 'KAVA', 'WOO', 'ROSE', 'LRC', 'ENS', 'ANKR', 'MASK', 'BLUR', 'PENDLE', 'ALT', 'MANTA', 'PIXEL', 'PORTAL', 'TRB', 'XLM', 'EOS', 'NEO', 'IOTA', 'ZIL', 'BAT', 'ENJ', 'LPT', 'XAI', 'SATS', 'BOME', 'ENA', 'W', 'TNSR', 'IO', 'ZRO'
-]
+GÜVENLİ_COİNLER = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', 'DOGE', 'TRX', 'LINK', 'MATIC', 'LTC', 'NEAR', 'UNI']
 
-# --- 3. BINANCE BAĞLANTISI ---
-client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY, {"verify": False})
+# --- 3. BINANCE BAGLANTISI ---
+# Baglanti hatalarini onlemek icin dogrudan baglaniyoruz
+try:
+    client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY)
+except Exception as e:
+    print(f"Binance Baglanti On Hazirlik Hatasi: {e}", flush=True)
 
 def bot_baslat():
-    print(">>> BOT BASLATILDI. HABERLER DINLENIYOR...", flush=True)
+    print(">>> SISTEM BASLADI. HABERLER BEKLENIYOR...", flush=True)
     islenenler = []
     
     while True:
         try:
-            # CryptoPanic API Sorgusu
+            # 404 hatasini cozmek icin en temiz URL yapisi
             url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&public=true"
             response = requests.get(url, timeout=20)
             
             if response.status_code == 200:
-                res = response.json()
-                haberler = res.get('results', [])
-                print(f"--- Tarama Yapıldı: {len(haberler)} haber inceleniyor. ---", flush=True)
+                data = response.json()
+                haberler = data.get('results', [])
+                print(f"--- Tarama Basarili: {len(haberler)} yeni veri ---", flush=True)
                 
                 for post in haberler:
                     if post['id'] not in islenenler:
-                        # Bullish (Yükseliş) oyu var mı kontrol et
-                        votes = post.get('votes', {})
-                        if votes.get('bullish', 0) > 0:
+                        # Sadece yukselis (bullish) oyu olanlari al
+                        if 'bullish' in str(post.get('votes', {})):
                             if 'currencies' in post:
                                 for c in post['currencies']:
                                     coin = c['code']
                                     if coin in GÜVENLİ_COİNLER:
-                                        print(f"!!! KRITIK HABER: {coin} YUKSELIS BEKLENTISI !!!", flush=True)
-                                        # İşlem mantığı buraya entegre edilebilir
+                                        print(f"!!! HABER GELDİ: {coin} YÜKSELİŞ SİNYALİ !!!", flush=True)
+                                        # Not: Binance IP kısıtlaması nedeniyle burası hata verebilir
                                         islenenler.append(post['id'])
             elif response.status_code == 429:
-                print("Site hızı sınırladı (429). 3 dakika mola...", flush=True)
+                print("Hiz siniri asildi, 3 dakika bekleniyor...", flush=True)
                 time.sleep(180)
-                continue
             else:
-                print(f"Bağlantı Sorunu: {response.status_code}", flush=True)
+                print(f"Haber Sitesi Hatasi: {response.status_code}", flush=True)
                 
         except Exception as e:
-            print(f"Sistem Hatası: {e}", flush=True)
+            print(f"Döngü Hatası: {e}", flush=True)
         
-        # Sitenin bizi engellememesi için 2 dakika bekliyoruz
-        time.sleep(120)
+        time.sleep(120) # 2 dakika bekleme
 
 if __name__ == "__main__":
     bot_baslat()
