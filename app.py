@@ -25,33 +25,40 @@ GÜVENLİ_COİNLER = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', '
 
 # --- 3. BOT DÖNGÜSÜ ---
 def bot_baslat():
-    print(">>> BOT AKTIF. HABERLER TARANIYOR...", flush=True)
+    print(">>> SİSTEM RESETLENDİ. TARAMA BAŞLIYOR...", flush=True)
     islenenler = []
     
     while True:
         try:
-            # 404 HATASINI COZMEK ICIN EN TEMEL URL
-            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&public=true"
-            response = requests.get(url, timeout=15)
+            # 404 HATASINI BİTİREN YENİ URL YAPISI
+            url = "https://cryptopanic.com/api/v1/posts/"
+            params = {
+                'auth_token': PANIC_API_KEY,
+                'public': 'true'
+            }
+            response = requests.get(url, params=params, timeout=20)
             
             if response.status_code == 200:
                 res = response.json()
                 for post in res.get('results', []):
-                    # Bullish filtrelemesini kodun icinde yapiyoruz (URL'de degil)
-                    if post['id'] not in islenenler and 'bullish' in str(post.get('votes', {})):
-                        if 'currencies' in post:
-                            coin = post['currencies'][0]['code']
-                            if coin in GÜVENLİ_COİNLER:
-                                print(f"!!! YUKSELIS HABERI: {coin} !!!", flush=True)
-                                # BINANCE ISLEM KODU BURAYA GELECEK
-                                islenenler.append(post['id'])
+                    # 'Bullish' kontrolünü kodun içinde yapıyoruz
+                    if post['id'] not in islenenler:
+                        votes = post.get('votes', {})
+                        if votes.get('bullish', 0) > 0: # En az 1 kişi bullish demişse
+                            if 'currencies' in post:
+                                for c in post['currencies']:
+                                    coin = c['code']
+                                    if coin in GÜVENLİ_COİNLER:
+                                        print(f"!!! HABER YAKALANDI: {coin} !!!", flush=True)
+                                        # Binance işlem emri buraya gelecek
+                                        islenenler.append(post['id'])
             else:
-                print(f"Hata Kodu: {response.status_code}. Baglanti deneniyor...", flush=True)
+                print(f"Haber Sitesi Hatasi: {response.status_code}", flush=True)
                 
         except Exception as e:
-            print(f"Hata: {e}", flush=True)
+            print(f"Sistemsel Hata: {e}", flush=True)
         
-        time.sleep(45)
+        time.sleep(60) # 429 (Hız sınırı) hatası almamak için 1 dakika bekleme
 
 if __name__ == "__main__":
     bot_baslat()
