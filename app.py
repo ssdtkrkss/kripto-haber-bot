@@ -8,7 +8,7 @@ from binance.client import Client
 # --- 1. WEB SUNUCUSU ---
 app = Flask(__name__)
 @app.route('/')
-def health_check(): return "Bot Aktif", 200
+def health_check(): return "BOT CALISIYOR", 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -23,36 +23,35 @@ PANIC_API_KEY = '2ae878976ba826131c7eb75e81803fbd42dab6da'
 
 GÜVENLİ_COİNLER = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT', 'DOGE', 'TRX', 'LINK', 'MATIC', 'LTC', 'NEAR', 'UNI', 'ICP', 'BCH', 'FIL', 'APT', 'ARB', 'OP', 'STX', 'RNDR', 'INJ', 'SUI', 'TIA', 'SEI', 'ORDI', 'BEAM', 'AAVE', 'IMX', 'KAS', 'LDO', 'FET', 'RUNE', 'ATOM', 'MKR', 'PEPE', 'GRT', 'ALGO', 'EGLD', 'QNT', 'FLOW', 'GALA', 'SNX', 'SAND', 'MANA', 'CHZ', 'AXS', 'MINA', 'DYDX', 'CRV', 'WLD', 'PYTH', 'BONK', 'JUP', 'STRK', 'LUNC', 'FLOKI', 'XMR', 'ETC', 'VET', 'THETA', 'FTM', 'HBAR', 'KAVA', 'WOO', 'ROSE', 'LRC', 'ENS', 'ANKR', 'MASK', 'BLUR', 'PENDLE', 'ALT', 'MANTA', 'PIXEL', 'PORTAL', 'TRB', 'XLM', 'EOS', 'NEO', 'IOTA', 'ZIL', 'BAT', 'ENJ', 'LPT', 'XAI', 'SATS', 'BOME', 'ENA', 'W', 'TNSR', 'IO', 'ZRO']
 
-client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY, {"verify": False})
-
+# --- 3. BOT DÖNGÜSÜ ---
 def bot_baslat():
-    print(">>> SİSTEM BAŞLATILDI. HABER BEKLENİYOR...", flush=True)
+    print(">>> BOT AKTIF. HABERLER TARANIYOR...", flush=True)
     islenenler = []
     
     while True:
         try:
-            # API URL'sini en basit haline getirdik (404 hatasini cozmek icin)
-            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&filter=bullish"
+            # 404 HATASINI COZMEK ICIN EN TEMEL URL
+            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={PANIC_API_KEY}&public=true"
             response = requests.get(url, timeout=15)
             
             if response.status_code == 200:
                 res = response.json()
                 for post in res.get('results', []):
-                    if post['id'] not in islenenler and 'currencies' in post:
-                        coin = post['currencies'][0]['code']
-                        if coin in GÜVENLİ_COİNLER:
-                            print(f"!!! KRİTİK HABER YAKALANDI: {coin} !!!", flush=True)
-                            # Burada Binance emir kodu calisir
-                            islenenler.append(post['id'])
-            elif response.status_code == 429:
-                print("Hiz sinirina takildi, 2 dakika bekleniyor...", flush=True)
-                time.sleep(120)
+                    # Bullish filtrelemesini kodun icinde yapiyoruz (URL'de degil)
+                    if post['id'] not in islenenler and 'bullish' in str(post.get('votes', {})):
+                        if 'currencies' in post:
+                            coin = post['currencies'][0]['code']
+                            if coin in GÜVENLİ_COİNLER:
+                                print(f"!!! YUKSELIS HABERI: {coin} !!!", flush=True)
+                                # BINANCE ISLEM KODU BURAYA GELECEK
+                                islenenler.append(post['id'])
             else:
-                print(f"Baglanti hatasi: {response.status_code}. Tekrar deneniyor...", flush=True)
+                print(f"Hata Kodu: {response.status_code}. Baglanti deneniyor...", flush=True)
+                
         except Exception as e:
-            print(f"Sistemsel hata: {e}", flush=True)
+            print(f"Hata: {e}", flush=True)
         
-        time.sleep(45) # Siteyi yormamak ve banlanmamak icin 45 saniye bekleme
+        time.sleep(45)
 
 if __name__ == "__main__":
     bot_baslat()
